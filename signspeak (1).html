@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>SignSpeak AI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#f4f8ff;--card:#fff;--tx:#0b1b3a;--mu:#51607f;--pr:#1d5fe0;--bd:#d5e0f5;--ok:#0a7d3e;--er:#b3261e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0a1226;--card:#121d3a;--tx:#eef3ff;--mu:#9db0d8;--pr:#6ea0ff;--bd:#25365f;--ok:#4ade80;--er:#ff8a80}}
+:root[data-theme="dark"]{--bg:#0a1226;--card:#121d3a;--tx:#eef3ff;--mu:#9db0d8;--pr:#6ea0ff;--bd:#25365f;--ok:#4ade80;--er:#ff8a80}
+:root[data-hc="1"]{--bg:#000;--card:#000;--tx:#fff;--mu:#fff;--pr:#ffe600;--bd:#fff}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+nav{position:sticky;top:env(safe-area-inset-top,0px);background:#0b1b3a;display:flex;gap:6px;align-items:center;padding:8px 12px;overflow-x:auto;z-index:5}
+nav b{color:#fff;white-space:nowrap;margin-right:8px}nav b span{color:#6ea0ff}
+nav a{color:#cfe0ff;text-decoration:none;padding:6px 12px;border-radius:99px;white-space:nowrap;font-size:14px}
+nav a.on{background:#1d5fe0;color:#fff}
+main{max-width:900px;margin:0 auto;padding:14px}
+section{display:none}section.on{display:block}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:14px;margin-bottom:14px;box-shadow:0 2px 8px #0b1b3a14}
+h1,h2,h3{margin:.2em 0 .5em}
+button,select,textarea,input{font:inherit;color:var(--tx)}
+button{background:var(--pr);color:#fff;border:0;border-radius:10px;padding:10px 14px;cursor:pointer;margin:3px 3px 3px 0;transition:.15s}
+:root[data-hc="1"] button{color:#000}
+button.sec{background:transparent;color:var(--pr);border:1px solid var(--pr)}
+button:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:3px solid #f5a300;outline-offset:2px}
+textarea,select,input{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:8px;width:100%}
+.vid{position:relative;background:#0b1b3a;border-radius:14px;overflow:hidden;aspect-ratio:4/3}
+.vid video,.vid canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.big{font-size:56px;font-weight:800;text-align:center;color:var(--pr);min-height:72px}
+.msg{color:var(--mu);font-size:14px}.err{color:var(--er)}.ok{color:var(--ok)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.sent{min-height:52px;font-size:22px;border:1px dashed var(--bd);border-radius:10px;padding:8px}
+.sp{display:inline-block;width:14px;height:14px;border:3px solid var(--bd);border-top-color:var(--pr);border-radius:50%;animation:r .8s linear infinite;vertical-align:middle}
+@keyframes r{to{transform:rotate(360deg)}}
+li{margin:4px 0}
+</style></head><body>
+<nav aria-label="Main"><b>🤟 SignSpeak <span>AI</span></b>
+<a href="#home">Home</a><a href="#live">Live</a><a href="#speech">Speech</a><a href="#learn">Learn</a><a href="#quiz">Practice</a><a href="#history">History</a><a href="#settings">Settings</a></nav>
+<main>
+<section id="home"><div class="card"><h1>SignSpeak AI</h1>
+<p>A <b>limited gesture-recognition prototype</b> for <b>American Sign Language (ASL)</b> static handshapes. It tracks your hand with MediaPipe, then classifies the handshape with a documented rule-based algorithm. It is not a full sign language translator: real signing also uses movement, facial expression, grammar and context.</p>
+<p><a href="#live"><button>Start translating</button></a><a href="#learn"><button class="sec">Learn the signs</button></a></p></div>
+<div class="card"><h3>How it works</h3><ol><li>MediaPipe finds 21 hand landmarks in each webcam frame.</li><li>The classifier checks which fingers are extended (distance from wrist, so it works at any hand rotation or size).</li><li>The handshape is matched to a supported sign. No match shows “Unknown gesture”.</li><li>A vote over the last 10 frames removes flicker.</li><li>You confirm with <b>Add to Sentence</b> (or Space key).</li></ol>
+<p class="msg">Privacy: video stays in your browser. Nothing is recorded or uploaded. History is saved only in this browser’s localStorage.</p></div></section>
+
+<section id="live"><div class="card"><h2>Live Sign Translator</h2>
+<div class="vid"><video id="v" playsinline muted></video><canvas id="c"></canvas></div>
+<p><button id="start">Start Camera</button><button id="stop" class="sec" disabled>Stop Camera</button> <span id="st" class="msg" role="status" aria-live="polite">Camera off.</span></p></div>
+<div class="card"><div class="msg">Recognized sign</div><div class="big" id="sign" aria-live="polite">–</div><div class="msg" id="why" style="text-align:center"></div>
+<p style="text-align:center"><button id="add" disabled>Add to Sentence</button> <span class="msg">(Space)</span></p></div>
+<div class="card"><h3>Sentence</h3><div class="sent" id="sent" aria-live="polite"></div>
+<button class="sec" id="sp">Add space</button><button class="sec" id="undo">Undo</button><button class="sec" id="clr">Clear</button><button class="sec" id="cp">Copy</button><button class="sec" id="sv">Save to history</button><button id="spk">Speak</button><button class="sec" id="pz">Pause</button><button class="sec" id="stp">Stop speech</button></div></section>
+
+<section id="speech"><div class="card"><h2>Text-to-Speech</h2><label for="tx">Text to read aloud</label><textarea id="tx" rows="4"></textarea>
+<button id="spk2">Speak</button><button class="sec" id="pz2">Pause</button><button class="sec" id="stp2">Stop</button>
+<p id="tts-msg" class="msg"></p><label for="vc">Voice</label><select id="vc"></select><label for="rt">Speed: <span id="rv">1</span>×</label><input id="rt" type="range" min="0.5" max="2" step="0.1" value="1"></div></section>
+
+<section id="learn"><div class="card"><h2>Learn ASL handshapes</h2>
+<p class="msg">These are text descriptions of the ASL handshapes this prototype recognizes. No illustrations are shown because none were verified for this build. Check each sign against a reliable reference such as Start ASL or Handspeak. Not in this list = unsupported.</p>
+<label for="q">Type a letter or word</label><input id="q" placeholder="e.g. A, L, ILY"><div id="qres" class="msg" role="status"></div></div>
+<div class="grid" id="gal"></div></section>
+
+<section id="quiz"><div class="card"><h2>Practice quiz</h2><p class="msg">Start the camera on the Live page first, then hold the target sign steadily.</p>
+<div class="msg">Target</div><div class="big" id="tg">–</div><div id="tgd" class="msg" style="text-align:center"></div>
+<p>Score: <b id="sc">0</b> / <b id="at">0</b></p><button id="qs">Start / Restart</button><button class="sec" id="qn">Skip</button><div id="fb" class="msg" role="status"></div>
+<h3>Practice history</h3><ul id="qh"></ul></div></section>
+
+<section id="history"><div class="card"><h2>Translation history</h2><p class="msg">Saved in this browser only (localStorage).</p><button class="sec" id="hcp">Copy all</button><button class="sec" id="hcl">Clear history</button><ul id="hl"></ul></div></section>
+
+<section id="settings"><div class="card"><h2>Settings &amp; Accessibility</h2>
+<p><label><input type="checkbox" id="hc" style="width:auto"> High contrast</label></p>
+<p><label><input type="checkbox" id="mir" style="width:auto" checked> Mirror camera view</label></p>
+<p><label><input type="checkbox" id="auto" style="width:auto"> Auto-add a sign after holding it 2 seconds</label></p>
+<label for="fs">Text size</label><input id="fs" type="range" min="14" max="24" value="16">
+<p class="msg">Voice and speed are on the Speech page. Every result is also shown as text, so sound is never required.</p></div></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const SIGNS={
+A:{f:"00000",t:1,d:"Make a fist with your thumb resting against the side of the index finger, pointing up."},
+B:{f:"01111",t:0,d:"Hold four fingers straight up together, with the thumb folded across the palm."},
+L:{f:"01000",t:1,d:"Extend the index finger up and the thumb out to the side, making an L."},
+I:{f:"00001",t:0,d:"Make a fist and raise only the little finger."},
+Y:{f:"00001",t:1,d:"Extend the thumb and little finger; fold the other three fingers down."},
+V:{f:"01100",t:0,d:"Raise the index and middle fingers in a spread V."},
+U:{f:"01100",t:0,d:"Raise the index and middle fingers held together."},
+W:{f:"01110",t:0,d:"Raise the index, middle and ring fingers, spread apart."},
+"5":{f:"01111",t:1,d:"Spread all five fingers open (ASL number 5)."},
+ILY:{f:"01001",t:1,d:"Thumb, index and little finger extended: ASL “I love you”."}};
+const NAMES=Object.keys(SIGNS);
+const CONN=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+function classify(l){
+ const ext=(t,p)=>d(l[t],l[0])>d(l[p],l[0])*1.12;
+ const fin=[ext(8,6),ext(12,10),ext(16,14),ext(20,18)].map(Number);
+ const sc=d(l[0],l[9]);
+ const th=d(l[4],l[17])>d(l[3],l[17])*1.1&&d(l[4],l[5])>0.55*sc?1:0;
+ const key=th+""+fin.join("");
+ const code=fin.join("");
+ const spread=d(l[8],l[12])/sc;
+ if(code==="1111")return th?"5":"B";
+ if(code==="0000")return th?"A":null;
+ if(code==="1000")return th?"L":null;
+ if(code==="0001")return th?"Y":"I";
+ if(code==="1100")return spread>0.45?"V":"U";
+ if(code==="1110")return "W";
+ if(code==="1001"&&th)return "ILY";
+ return null;}
+// UI
+const pages=[...document.querySelectorAll("section")];
+function route(){const h=(location.hash||"#home").slice(1);pages.forEach(p=>p.classList.toggle("on",p.id===h));document.querySelectorAll("nav a").forEach(a=>a.classList.toggle("on",a.getAttribute("href")==="#"+h));if(h==="history")renderH();}
+addEventListener("hashchange",route);route();
+let sentence="",cur=null,hold=0;
+const lsGet=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))||f}catch(e){return f}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+function showS(){$("sent").textContent=sentence||"Your sentence appears here.";}
+showS();
+$("add").onclick=addSign;
+function addSign(){if(cur){sentence+=cur;showS();}}
+addEventListener("keydown",e=>{if(e.code==="Space"&&location.hash==="#live"&&!/TEXTAREA|INPUT/.test(e.target.tagName)&&!e.target.closest("button")){e.preventDefault();addSign();}});
+$("sp").onclick=()=>{sentence+=" ";showS()};
+$("undo").onclick=()=>{sentence=sentence.slice(0,-1);showS()};
+$("clr").onclick=()=>{sentence="";showS()};
+$("cp").onclick=()=>copy(sentence);
+function copy(t){navigator.clipboard?.writeText(t).then(()=>flash("Copied."),()=>flash("Copy not available."));}
+function flash(m){$("st").textContent=m}
+$("sv").onclick=()=>{if(!sentence.trim())return;const h=lsGet("ss_hist",[]);h.unshift({t:sentence.trim(),at:new Date().toLocaleString()});lsSet("ss_hist",h.slice(0,50));flash("Saved to history.")};
+function renderH(){const h=lsGet("ss_hist",[]);$("hl").innerHTML=h.length?h.map(x=>`<li>${x.t.replace(/</g,"&lt;")} <span class="msg">(${x.at})</span></li>`).join(""):"<li class='msg'>Nothing saved yet.</li>";}
+$("hcl").onclick=()=>{lsSet("ss_hist",[]);renderH()};
+$("hcp").onclick=()=>copy(lsGet("ss_hist",[]).map(x=>x.t).join("\n"));
+// Settings
+$("hc").onchange=e=>document.documentElement.dataset.hc=e.target.checked?"1":"";
+$("fs").oninput=e=>document.body.style.fontSize=e.target.value+"px";
+$("mir").onchange=applyMirror;
+function applyMirror(){const t=$("mir").checked?"scaleX(-1)":"none";$("v").style.transform=t;$("c").style.transform=t;}
+// Speech
+const ss=window.speechSynthesis;
+function loadV(){if(!ss){$("tts-msg").textContent="Speech synthesis isn’t available in this browser. The text is still shown on screen.";return;}
+ const v=ss.getVoices();$("vc").innerHTML=v.map((x,i)=>`<option value="${i}">${x.name} (${x.lang})</option>`).join("");}
+loadV();if(ss)ss.onvoiceschanged=loadV;
+$("rt").oninput=e=>$("rv").textContent=e.target.value;
+function say(t){if(!ss){$("tts-msg").textContent="Speech synthesis isn’t available in this browser.";flash("Speech unavailable.");return}
+ if(!t.trim())return;ss.cancel();const u=new SpeechSynthesisUtterance(t);const v=ss.getVoices()[$("vc").value];if(v)u.voice=v;u.rate=+$("rt").value;ss.speak(u);}
+$("spk").onclick=()=>say(sentence);$("spk2").onclick=()=>say($("tx").value);
+$("pz").onclick=$("pz2").onclick=()=>ss&&(ss.speaking&&!ss.paused?ss.pause():ss.resume());
+$("stp").onclick=$("stp2").onclick=()=>ss&&ss.cancel();
+// Learn
+$("gal").innerHTML=NAMES.map(n=>`<div class="card"><h3>${n}</h3><p>${SIGNS[n].d}</p><p class="msg">ASL · static handshape</p></div>`).join("");
+$("q").oninput=e=>{const w=e.target.value.trim().toUpperCase();if(!w){$("qres").textContent="";return}
+ if(SIGNS[w]){$("qres").innerHTML=`<b>${w}</b>: ${SIGNS[w].d}`;return}
+ const parts=[...w].map(c=>SIGNS[c]?`<li><b>${c}</b>: ${SIGNS[c].d}</li>`:`<li><b>${c}</b>: unsupported in this prototype</li>`);
+ $("qres").innerHTML=`“${w}” has no supported single sign. Fingerspelling letters (only supported letters shown):<ul>${parts.join("")}</ul>`;};
+// Camera + model
+let stream,lm,running=false,buf=[],lastT=-1;
+const v=$("v"),cv=$("c"),cx=cv.getContext("2d");
+async function loadModel(){
+ if(lm)return;
+ const M=await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/+esm");
+ const f=await M.FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+ lm=await M.HandLandmarker.createFromOptions(f,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"},runningMode:"VIDEO",numHands:1});}
+$("start").onclick=async()=>{
+ $("st").innerHTML='<span class="sp"></span> Starting…';$("start").disabled=true;
+ try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:640,height:480}});}
+ catch(e){$("st").innerHTML='<span class="err">'+(e.name==="NotAllowedError"?"Camera permission denied. Allow camera access in your browser settings.":"No camera available or it could not start.")+"</span>";$("start").disabled=false;return}
+ v.srcObject=stream;await v.play();applyMirror();
+ try{$("st").innerHTML='<span class="sp"></span> Loading hand model…';await loadModel();}
+ catch(e){$("st").innerHTML='<span class="err">The hand-tracking model could not load (network blocked or offline). Run this file from your own host or localhost with internet access.</span>';stopCam();return}
+ running=true;$("stop").disabled=false;$("st").textContent="Camera on. Show a supported sign.";loop();};
+function stopCam(){running=false;stream&&stream.getTracks().forEach(t=>t.stop());v.srcObject=null;cx.clearRect(0,0,cv.width,cv.height);$("start").disabled=false;$("stop").disabled=true;$("add").disabled=true;setSign(null);}
+$("stop").onclick=()=>{stopCam();$("st").textContent="Camera off."};
+function loop(){
+ if(!running)return;
+ if(v.readyState>=2&&v.currentTime!==lastT){lastT=v.currentTime;
+  cv.width=v.videoWidth;cv.height=v.videoHeight;cx.clearRect(0,0,cv.width,cv.height);
+  const r=lm.detectForVideo(v,performance.now());let g=null;
+  if(r.landmarks&&r.landmarks[0]){const p=r.landmarks[0];draw(p);g=classify(p);buf.push(g||"?");}else buf.push("-");
+  if(buf.length>10)buf.shift();
+  const cnt={};buf.forEach(x=>cnt[x]=(cnt[x]||0)+1);
+  const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
+  const stable=buf.length>=6&&top[1]>=6?top[0]:null;
+  if(stable&&SIGNS[stable])setSign(stable);else if(stable==="-")setSign(null,"No hand detected");else setSign(null,"Unknown gesture");}
+ requestAnimationFrame(loop);}
+function draw(p){const W=cv.width,H=cv.height;cx.lineWidth=3;cx.strokeStyle="#6ea0ff";
+ CONN.forEach(([a,b])=>{cx.beginPath();cx.moveTo(p[a].x*W,p[a].y*H);cx.lineTo(p[b].x*W,p[b].y*H);cx.stroke()});
+ cx.fillStyle="#fff";p.forEach(q=>{cx.beginPath();cx.arc(q.x*W,q.y*H,4,0,7);cx.fill()});}
+let heldSince=0,autoDone=false;
+function setSign(s,note){
+ if(s!==cur){cur=s;heldSince=Date.now();autoDone=false;}
+ $("sign").textContent=s||"–";$("why").textContent=s?"Matched by rule-based handshape classifier (no confidence score).":(note||"");
+ $("add").disabled=!s;
+ if(s&&$("auto").checked&&!autoDone&&Date.now()-heldSince>2000){autoDone=true;addSign();}
+ quizCheck(s);}
+// Quiz
+let tgt=null,score=0,att=0,qHold=0;
+function nextT(){tgt=NAMES[Math.floor(Math.random()*NAMES.length)];qHold=0;$("tg").textContent=tgt;$("tgd").textContent=SIGNS[tgt].d;}
+$("qs").onclick=()=>{score=0;att=0;$("sc").textContent=0;$("at").textContent=0;$("qh").innerHTML="";$("fb").textContent="Go!";nextT();};
+$("qn").onclick=()=>{if(!tgt)return;att++;log(false);nextT();};
+function log(ok){$("at").textContent=att;$("sc").textContent=score;const li=document.createElement("li");li.textContent=(ok?"✓ ":"✗ ")+tgt;$("qh").prepend(li);}
+function quizCheck(s){if(!tgt||location.hash!=="#quiz")return;
+ if(s===tgt){qHold=qHold||Date.now();if(Date.now()-qHold>800){score++;att++;$("fb").innerHTML='<span class="ok">Great job! That’s '+tgt+'.</span>';log(true);nextT();}}
+ else{qHold=0;if(s)$("fb").textContent="Detected "+s+". Try the "+tgt+" shape.";}}
+</script></body></html>
